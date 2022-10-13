@@ -1,0 +1,73 @@
+{
+  "success": true,
+  "list": [
+    {
+      "idx": 21,
+      "title": "wrwerwe",
+      "author": "rwrewrwe",
+      "created_at": "2022-09-13 04:49:55"
+    },
+    {
+      "idx": 20,
+      "title": "wrwrwe",
+      "author": "rwrwere",
+      "created_at": "2022-09-13 04:49:47"
+    },
+    {
+      "idx": 19,
+      "title": "dsads",
+      "author": "sadasd",
+      "created_at": "2022-09-13 04:49:33"
+    },
+    {
+      "idx": 18,
+      "title": "dfdasfdasfasd",
+      "author": "fsaf",
+      "created_at": "2022-09-13 04:47:09"
+    },
+    {
+      "idx": 17,
+      "title": "rere",
+      "author": "ere",
+      "created_at": "2022-09-13 04:45:18"
+    },
+    {
+      "idx": 16,
+      "title": "ddd",
+      "author": "dfdf",
+      "created_at": "2022-09-13 04:44:37"
+    },
+    {
+      "idx": 15,
+      "title": "test",
+      "author": "ddd",
+      "created_at": "2022-09-13 04:43:34"
+    },
+    {
+      "idx": 14,
+      "title": "신규테스트",
+      "author": "신규테스트 조회....",
+      "created_at": "2022-09-13 04:40:04"
+    },
+    {
+      "idx": 13,
+      "title": "수정",
+      "author": "수정......dddd",
+      "created_at": "2022-09-13 02:55:37"
+    },
+    {
+      "idx": 12,
+      "title": "test",
+      "author": "ㅅㄷdd",
+      "created_at": "2022-09-13 02:48:56"
+    }
+  ],
+  "paging": {
+    "totalCount": 21,
+    "total_page": 3,
+    "page": "1",
+    "start_page": 1,
+    "end_page": 3,
+    "ipp": "10"
+  }
+}
