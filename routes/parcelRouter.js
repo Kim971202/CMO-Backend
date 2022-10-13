@@ -144,7 +144,10 @@ router.get("/getDetailedParcelList/:idx", async (req, res, next) => {
   console.log(serviceKey, idx);
 
   try {
-    const sql = `SELECT DATE_FORMAT(arrival_time, '%Y-%m-%d %h:%i:%s') AS arrivalTime, (parcel_flag) AS parcelFlag,
+    const sql = `SELECT DATE_FORMAT(arrival_time, '%Y-%m-%d %h:%i:%s') AS arrivalTime, 
+                        (CASE WHEN parcel_status = '0' THEN '미수령'
+                              WHEN parcel_status = '1' THEN '수령'
+                              WHEN parcel_status = '2' THEN '반품' ELSE '-' END) AS parcelStatus,
                         dong_code AS dongCode, ho_code AS hoCode, IFNULL(memo, '-') AS parcelCorp
                  FROM t_delivery
                  WHERE idx = ?`;
@@ -156,7 +159,7 @@ router.get("/getDetailedParcelList/:idx", async (req, res, next) => {
     resultList = data[0];
     if (resultList.length > 0) {
       arrivalTime = resultList[0].arrivalTime;
-      parcelFlag = resultList[0].parcelFlag;
+      parcelStatus = resultList[0].parcelStatus;
       dongCode = resultList[0].dongCode;
       hoCode = resultList[0].hoCode;
       parcelCorp = resultList[0].parcelCorp;
@@ -167,7 +170,7 @@ router.get("/getDetailedParcelList/:idx", async (req, res, next) => {
       resultMsg: "NORMAL_SERVICE",
       idx,
       arrivalTime,
-      parcelFlag,
+      parcelStatus,
       dongCode,
       hoCode,
       parcelCorp,
@@ -183,31 +186,42 @@ router.get("/getDetailedParcelList/:idx", async (req, res, next) => {
 router.post("/postParcel", async (req, res, next) => {
   let {
     parcelStatus = 0,
+    parcelBoxNo = "",
+    mailBoxNo = "",
+    receiver = "",
+    delFee = 0,
     dongCode = "",
     hoCode = "",
     parcelCorp = "",
   } = req.body;
-  if ((await checkServiceKeyResult(serviceKey)) == false) {
-    return res.json({
-      resultCode: "30",
-      resultMsg: "등록되지 않은 서비스키 입니다.",
-    });
-  }
-  console.log(parcelStatus, dongCode, hoCode, parcelCorp);
+  //   if ((await checkServiceKeyResult(serviceKey)) == false) {
+  //     return res.json({
+  //       resultCode: "30",
+  //       resultMsg: "등록되지 않은 서비스키 입니다.",
+  //     });
+  //   }
+  console.log(
+    parcelStatus,
+    parcelBoxNo,
+    mailBoxNo,
+    receiver,
+    delFee,
+    dongCode,
+    hoCode,
+    parcelCorp
+  );
+
   try {
-    parcelBoxNo = "00" + 1;
-    mailBoxNo = "0" + 1;
-    receiver = `${dongCode} - ${hoCode}`;
-    del_fee = 1000;
     parcelFlage = "유인";
 
-    let sql = `INSERT INTO t_delivery(arrival_time, parcel_box_no, mail_box_no, receiver, del_fee, dong_code, ho_code, receive_time, parcel_status, parcel_flag, user_id, send_time, send_result, memo)
-                 VALUES(now(),?,?,?,?,?,?,now(),?,?,'tester',now(),'N',?)`;
+    let sql = `INSERT INTO t_delivery(arrival_time, parcel_box_no, mail_box_no, receiver, del_fee, dong_code, ho_code, 
+                                      receive_time, parcel_status, parcel_flag, user_id, send_time, send_result, memo)
+               VALUES(now(),?,?,?,?,?,?,now(),?,?,'tester',now(),'N',?)`;
     const data = await pool.query(sql, [
       parcelBoxNo,
       mailBoxNo,
       receiver,
-      del_fee,
+      delFee,
       dongCode,
       hoCode,
       parcelStatus,
@@ -243,12 +257,7 @@ router.post("/postParcel", async (req, res, next) => {
 router.put("/updateParcel", async (req, res, next) => {
   let { serviceKey = "", idx = 0, parcelStatus = 0 } = req.body;
   console.log(serviceKey, idx, parcelStatus);
-  if ((await checkServiceKeyResult(serviceKey)) == false) {
-    return res.json({
-      resultCode: "30",
-      resultMsg: "등록되지 않은 서비스키 입니다.",
-    });
-  }
+
   try {
     const sql = `UPDATE t_delivery SET parcel_status = ?, receive_time = now() WHERE idx = ?`;
     console.log("sql: " + sql);

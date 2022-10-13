@@ -10,9 +10,9 @@ const vuebbsRoute = require("./routes/vuebbs-route");
 const boardapi = require("./routes/boardapi");
 
 /////////////////// APT API //////////////////////////////////
-
 const elvRouter = require("./routes/elvRouter");
 const parcelRouter = require("./routes/parcelRouter");
+const elecCarRouter = require("./routes/elecCarRouter");
 /////////////////////////////////////////////////////////////
 
 const corsOptions = {
@@ -36,6 +36,7 @@ app.use(function (req, res, next) {
 app.use("/members", memberapi);
 app.use("/vueboard", vuebbsRoute);
 app.use("/boards", boardapi);
+app.use("/elecCar", elecCarRouter);
 
 /////////////////// APT API //////////////////////////////////
 app.use("/elv", elvRouter);
