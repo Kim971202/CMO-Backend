@@ -14,6 +14,8 @@ const elvRouter = require("./routes/elvRouter");
 const parcelRouter = require("./routes/parcelRouter");
 const elecCarRouter = require("./routes/elecCarRouter");
 const complaintRouter = require("./routes/complaintRouter");
+const emsRouter = require("./routes/emsRouter");
+const noticeRouter = require("./routes/noticeRouter");
 /////////////////////////////////////////////////////////////
 
 const corsOptions = {
@@ -43,6 +45,8 @@ app.use("/elv", elvRouter);
 app.use("/parcel", parcelRouter);
 app.use("/elecCar", elecCarRouter);
 app.use("/complaint", complaintRouter);
+app.use("/ems", emsRouter);
+app.use("/notice", noticeRouter);
 /////////////////////////////////////////////////////////////
 
 app.get("/", (req, res) => {

@@ -32,7 +32,6 @@ router.get("/getApplicationList", async (req, res, next) => {
   let end = size;
   let start_page = 1;
   let end_page = block;
-  let parcelStatus_ = "%";
 
   try {
     let defaultCondition = `LIKE '%'`;
