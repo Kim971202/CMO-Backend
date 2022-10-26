@@ -106,13 +106,13 @@ router.get("/getNoticeList", async (req, res, next) => {
                           DATE_FORMAT(a.end_date, '%Y-%m-%d') AS endDate,
                           b.send_result AS sendResult
                           FROM t_notice a
-                          INNER JOIN t_notice_send b
-                          WHERE a.idx = b.idx 
+                          LEFT JOIN t_notice_send b
+                          ON a.idx = b.idx 
                                 AND (DATE(a.start_date) >= '${defaultStartDate} ${startDate}' AND (DATE(a.end_date) <= '${defaultEndDate} ${endDate}'))
                                 AND a.noti_type ${defaultNotiTypeCondtion} ${notiTypeCondition}
                                 AND b.send_result ${defaultSendResultCondition} ${sendResultCondition}
                                 AND a.noti_content ${defaultNotiContentCondtion} ${notiContentCondition}
-                          LIMIT ?,?`;
+                                GROUP BY a.idx LIMIT ?,?`;
 
     console.log("sql=>" + sql);
     const data = await pool.query(sql, [Number(start), Number(end)]);
@@ -315,35 +315,35 @@ router.get("/getDetailedNoticeList", async (req, res, next) => {
 // });
 
 // // 공지사항 삭제
-// router.delete("/deleteNotice", async (req, res) => {
-//   let { serviceKey = "", idx = 0 } = req.body;
-//   console.log(idx);
+router.delete("/deleteNotice/:idx", async (req, res) => {
+  let { serviceKey = "", idx = 0 } = req.params;
+  console.log(idx);
 
-//   try {
-//     // 월패드 알림이 Y 이면 삭제 불가
-//     const checkNotiTypeSQL = `SELECT send_result AS sendResult FROM t_notice_send WHERE idx = ?`;
-//     console.log("checkNotiTypeSQL: " + checkNotiTypeSQL);
-//     const data = await pool.query(checkNotiTypeSQL, [idx]);
-//     console.log(data[0][0].sendResult);
-//     if (data[0][0].sendResult === "Y") {
-//       return res.json({
-//         resultCode: "08",
-//         resultMsg: "이미 등록된 공지사항 입니다.",
-//       });
-//     }
+  try {
+    // 월패드 알림이 Y 이면 삭제 불가
+    const checkNotiTypeSQL = `SELECT send_result AS sendResult FROM t_notice_send WHERE idx = ?`;
+    console.log("checkNotiTypeSQL: " + checkNotiTypeSQL);
+    const data = await pool.query(checkNotiTypeSQL, [idx]);
+    console.log(data[0][0].sendResult);
+    if (data[0][0].sendResult === "Y") {
+      return res.json({
+        resultCode: "08",
+        resultMsg: "이미 등록된 공지사항 입니다.",
+      });
+    }
 
-//     const sql = `DELETE FROM t_notice_send WHERE idx = ?`;
-//     console.log("sql: " + sql);
-//     const data2 = await pool.query(sql, [idx]);
+    const sql = `DELETE FROM t_notice_send WHERE idx = ?`;
+    console.log("sql: " + sql);
+    const data2 = await pool.query(sql, [idx]);
 
-//     let jsonResult = {
-//       resultCode: "00",
-//       resultMsg: "NORMAL_SERVICE",
-//     };
-//     return res.json(jsonResult);
-//   } catch (error) {
-//     return res.status(500).json(error);
-//   }
-// });
+    let jsonResult = {
+      resultCode: "00",
+      resultMsg: "NORMAL_SERVICE",
+    };
+    return res.json(jsonResult);
+  } catch (error) {
+    return res.status(500).json(error);
+  }
+});
 
 module.exports = router;

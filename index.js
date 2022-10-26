@@ -16,6 +16,7 @@ const elecCarRouter = require("./routes/elecCarRouter");
 const complaintRouter = require("./routes/complaintRouter");
 const emsRouter = require("./routes/emsRouter");
 const noticeRouter = require("./routes/noticeRouter");
+const voteRouter = require("./routes/voteRouter");
 /////////////////////////////////////////////////////////////
 
 const corsOptions = {
@@ -47,6 +48,7 @@ app.use("/elecCar", elecCarRouter);
 app.use("/complaint", complaintRouter);
 app.use("/ems", emsRouter);
 app.use("/notice", noticeRouter);
+app.use("/vote", voteRouter);
 /////////////////////////////////////////////////////////////
 
 app.get("/", (req, res) => {

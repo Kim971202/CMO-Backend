@@ -112,7 +112,7 @@ router.get("/getDetailedEMS", async (req, res, next) => {
     endDate = "",
     dongCode = "",
     hoCode = "",
-    energyType = "ALL",
+    energyType = "",
   } = req.query;
 
   console.log(
@@ -125,7 +125,7 @@ router.get("/getDetailedEMS", async (req, res, next) => {
     hoCode,
     energyType
   );
-
+  console.log("energyType: " + energyType);
   let totalCount = 0;
   let block = 10;
   let total_page = 0;
@@ -142,27 +142,27 @@ router.get("/getDetailedEMS", async (req, res, next) => {
     let heatingSQL = `heating_meter AS heatingMeter, heating_usage AS heatingUsage`;
     let condition = "";
 
-    if (energyType == "elec") {
+    if (energyType === "elec") {
       waterSQL = "";
       hotWaterSQL = "";
       heatingSQL = "";
       gasSQL = "";
-    } else if (energyType == "water") {
+    } else if (energyType === "water") {
       elecSQL = "";
       hotWaterSQL = "";
       heatingSQL = "";
       gasSQL = "";
-    } else if (energyType == "hotWater") {
+    } else if (energyType === "hotWater") {
       waterSQL = "";
       elecSQL = "";
       heatingSQL = "";
       gasSQL = "";
-    } else if (energyType == "heating") {
+    } else if (energyType === "heating") {
       waterSQL = "";
       hotWaterSQL = "";
       elecSQL = "";
       gasSQL = "";
-    } else if (energyType == "gas") {
+    } else if (energyType === "gas") {
       waterSQL = "";
       hotWaterSQL = "";
       elecSQL = "";
@@ -220,7 +220,7 @@ router.get("/getDetailedEMS", async (req, res, next) => {
       Number(end),
     ]);
     let list = data[0];
-    console.log(list);
+
     let jsonResult = {
       resultCode: "00",
       resultMsg: "NORMAL_SERVICE",

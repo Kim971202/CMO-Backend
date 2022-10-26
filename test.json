@@ -1,73 +1,114 @@
 {
-  "success": true,
+  "resultCode": "00",
+  "resultMsg": "NORMAL_SERVICE",
   "list": [
     {
-      "idx": 21,
-      "title": "wrwerwe",
-      "author": "rwrewrwe",
-      "created_at": "2022-09-13 04:49:55"
+      "idx": 1,
+      "no": 1,
+      "voteTitle": "201동대표 선거 안내",
+      "vStartDTime": "2021-09-01 09:00",
+      "vEndDTime": "2021-09-07 06:00",
+      "voteRate": 75,
+      "vEndFlag": "Y",
+      "userCode": "관리자"
     },
     {
-      "idx": 20,
-      "title": "wrwrwe",
-      "author": "rwrwere",
-      "created_at": "2022-09-13 04:49:47"
+      "idx": 2,
+      "no": 2,
+      "voteTitle": "102동대표 선거 안내",
+      "vStartDTime": "2021-08-01 09:00",
+      "vEndDTime": "2021-08-07 06:00",
+      "voteRate": 60,
+      "vEndFlag": "Y",
+      "userCode": "관리자"
     },
     {
-      "idx": 19,
-      "title": "dsads",
-      "author": "sadasd",
-      "created_at": "2022-09-13 04:49:33"
+      "idx": 5,
+      "no": 3,
+      "voteTitle": "SKt 통신불량 조사",
+      "vStartDTime": "2021-10-01 09:00",
+      "vEndDTime": "2021-10-07 08:00",
+      "voteRate": 0,
+      "vEndFlag": "N",
+      "userCode": "관리자"
     },
     {
-      "idx": 18,
-      "title": "dfdasfdasfasd",
-      "author": "fsaf",
-      "created_at": "2022-09-13 04:47:09"
+      "idx": 6,
+      "no": 4,
+      "voteTitle": "입주자 대표 선거 안내",
+      "vStartDTime": "2021-09-26 07:00",
+      "vEndDTime": "2021-09-30 12:00",
+      "voteRate": 0,
+      "vEndFlag": "N",
+      "userCode": "관리자"
     },
     {
-      "idx": 17,
-      "title": "rere",
-      "author": "ere",
-      "created_at": "2022-09-13 04:45:18"
+      "idx": 76,
+      "no": 5,
+      "voteTitle": "테스트투표1",
+      "vStartDTime": "2022-09-29 09:00",
+      "vEndDTime": "2022-10-02 06:00",
+      "voteRate": 0,
+      "vEndFlag": "N",
+      "userCode": "tester"
     },
     {
-      "idx": 16,
-      "title": "ddd",
-      "author": "dfdf",
-      "created_at": "2022-09-13 04:44:37"
+      "idx": 77,
+      "no": 6,
+      "voteTitle": "테스트투표2",
+      "vStartDTime": "2022-09-29 09:00",
+      "vEndDTime": "2022-10-02 06:00",
+      "voteRate": 0,
+      "vEndFlag": "N",
+      "userCode": "tester"
     },
     {
-      "idx": 15,
-      "title": "test",
-      "author": "ddd",
-      "created_at": "2022-09-13 04:43:34"
+      "idx": 78,
+      "no": 7,
+      "voteTitle": "테스트투표3",
+      "vStartDTime": "2022-09-29 09:00",
+      "vEndDTime": "2022-10-02 06:00",
+      "voteRate": 0,
+      "vEndFlag": "N",
+      "userCode": "tester"
     },
     {
-      "idx": 14,
-      "title": "신규테스트",
-      "author": "신규테스트 조회....",
-      "created_at": "2022-09-13 04:40:04"
+      "idx": 79,
+      "no": 8,
+      "voteTitle": "테스트투표3",
+      "vStartDTime": "2022-09-29 09:00",
+      "vEndDTime": "2022-10-02 06:00",
+      "voteRate": 0,
+      "vEndFlag": "N",
+      "userCode": "tester"
     },
     {
-      "idx": 13,
-      "title": "수정",
-      "author": "수정......dddd",
-      "created_at": "2022-09-13 02:55:37"
+      "idx": 80,
+      "no": 9,
+      "voteTitle": "수정함",
+      "vStartDTime": "2030-09-01 09:00",
+      "vEndDTime": "2030-09-01 09:00",
+      "voteRate": 0,
+      "vEndFlag": "N",
+      "userCode": "tester"
     },
     {
-      "idx": 12,
-      "title": "test",
-      "author": "ㅅㄷdd",
-      "created_at": "2022-09-13 02:48:56"
+      "idx": 81,
+      "no": 10,
+      "voteTitle": "테스트투표10",
+      "vStartDTime": "2022-09-29 09:00",
+      "vEndDTime": "2022-10-02 06:00",
+      "voteRate": 0,
+      "vEndFlag": "N",
+      "userCode": "tester"
     }
   ],
   "paging": {
-    "totalCount": 21,
-    "total_page": 3,
+    "totalCount": 13,
+    "total_page": 2,
     "page": "1",
     "start_page": 1,
-    "end_page": 3,
+    "end_page": 2,
     "ipp": "10"
   }
 }
