@@ -297,4 +297,24 @@ router.get("/getEMSManage", async (req, res, next) => {
   }
 });
 
+//에너지유형 콤보박스
+router.get("/energyList", async (req, res, next) => {
+  try {
+    let sql = `SELECT (CASE WHEN energy_type = 'elec' THEN '전기'
+                           WHEN energy_type = 'water' THEN '수도'
+                           WHEN energy_type = 'hotWater' THEN '온수'
+                           WHEN energy_type = 'heating' THEN '난방'
+                           WHEN energy_type = 'gas' THEN '가스' ELSE '' END) AS energyType FROM t_energy_setting`;
+    console.log("sql=>" + sql);
+
+    const data = await pool.query(sql);
+    let items = data[0];
+    let jsonResult = { items };
+    console.log(jsonResult);
+    return res.json(jsonResult);
+  } catch (err) {
+    return res.status(500).json(err);
+  }
+});
+
 module.exports = router;

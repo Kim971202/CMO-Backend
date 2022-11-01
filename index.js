@@ -17,6 +17,9 @@ const complaintRouter = require("./routes/complaintRouter");
 const emsRouter = require("./routes/emsRouter");
 const noticeRouter = require("./routes/noticeRouter");
 const voteRouter = require("./routes/voteRouter");
+const mngFeeRouter = require("./routes/mngFeeRouter");
+const donghoInfoRoute = require("./routes/donghoInfo-route");
+const fileUploadRouter = require("./common/fileUpload");
 /////////////////////////////////////////////////////////////
 
 const corsOptions = {
@@ -49,6 +52,9 @@ app.use("/complaint", complaintRouter);
 app.use("/ems", emsRouter);
 app.use("/notice", noticeRouter);
 app.use("/vote", voteRouter);
+app.use("/mngFee", mngFeeRouter);
+app.use("/donghoInfo", donghoInfoRoute);
+app.use("/fileUpload", fileUploadRouter);
 /////////////////////////////////////////////////////////////
 
 app.get("/", (req, res) => {

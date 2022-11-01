@@ -306,16 +306,9 @@ router.put("/updateVoteAgenda", async (req, res, next) => {
 });
 
 // 투표 삭제: 단, 이미 시작된 투표는 삭제 불가능
-router.delete("/deleteVoteAgenda", async (req, res, next) => {
-  let { serviceKey = "", idx = 0 } = req.body;
+router.delete("/deleteVoteAgenda/:idx", async (req, res, next) => {
+  let { serviceKey = "", idx = 0 } = req.params;
   console.log(serviceKey, idx);
-
-  if ((await checkServiceKeyResult(serviceKey)) == false) {
-    return res.json({
-      resultCode: "30",
-      resultMsg: "등록되지 않은 서비스키 입니다.",
-    });
-  }
 
   try {
     const sql = `SELECT DATE_FORMAT(v_start_dtime, '%Y-%m-%d %h') AS vsDtime FROM t_vote_agenda WHERE idx = ?`;
@@ -335,9 +328,13 @@ router.delete("/deleteVoteAgenda", async (req, res, next) => {
     console.log("deleteItemSQL: " + deleteItemSQL);
     const data3 = await pool.query(deleteItemSQL, [idx]);
 
+    const deleteVotersSQL = `DELETE FROM t_voters WHERE idx = ?`;
+    console.log("deleteVotersSQL: " + deleteVotersSQL);
+    const data4 = await pool.query(deleteVotersSQL, [idx]);
+
     const deleteAgendaSQL = `DELETE FROM t_vote_agenda WHERE idx = ?`;
     console.log("deleteAgendaSQL: " + deleteAgendaSQL);
-    const data4 = await pool.query(deleteAgendaSQL, [idx]);
+    const data5 = await pool.query(deleteAgendaSQL, [idx]);
 
     let jsonResult = {
       resultCode: "00",
