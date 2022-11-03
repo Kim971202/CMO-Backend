@@ -304,7 +304,8 @@ router.get("/energyList", async (req, res, next) => {
                            WHEN energy_type = 'water' THEN '수도'
                            WHEN energy_type = 'hotWater' THEN '온수'
                            WHEN energy_type = 'heating' THEN '난방'
-                           WHEN energy_type = 'gas' THEN '가스' ELSE '' END) AS energyType FROM t_energy_setting`;
+                           WHEN energy_type = 'gas' THEN '가스' ELSE '' END) AS energyType,
+                           energy_type AS engEnergyType FROM t_energy_setting`;
     console.log("sql=>" + sql);
 
     const data = await pool.query(sql);

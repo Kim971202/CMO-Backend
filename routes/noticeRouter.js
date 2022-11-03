@@ -1,10 +1,8 @@
 var express = require("express");
 var router = express.Router();
 const pool = require("../database/pool");
-const { upload, file, checkUploadType } = require("../common/fileUpload");
-var path = require("path");
-const readline = require("readline");
 
+let { checkUploadType, deleteFile, listDir } = require("../common/fileUpload");
 // 공지사항 목록조회
 router.get("/getNoticeList", async (req, res, next) => {
   let {
@@ -185,7 +183,7 @@ router.get("/getDetailedNoticeList/:idx", async (req, res, next) => {
   }
 });
 
-// // 공지사항 등록 (개별, 전체)
+// 공지사항 등록 (개별, 전체)
 router.post("/postNotice", async (req, res, next) => {
   let {
     serviceKey = "serviceKey", // 서비스 인증키
@@ -196,8 +194,9 @@ router.post("/postNotice", async (req, res, next) => {
     notiContent = "", //  공지 내용
     startDate = "", //    공지 시작일
     endDate = "", //      공지 종료일
-    notiOwer = "ewtrhpjoeth", //     공지 주체
+    notiOwer = "관리사무소", // 공지 주체
   } = req.body;
+
   console.log(
     serviceKey,
     dongCode,
@@ -209,34 +208,25 @@ router.post("/postNotice", async (req, res, next) => {
     endDate,
     notiOwer
   );
-  let fileName = "파일명";
-  let filePath = "파일경로";
+  console.log(await listDir());
+  let filePath = "public/notice/" + (await listDir());
   try {
+    let _notiType = "";
+    if (notiType == "Y") {
+      _notiType = "전체";
+    } else if (notiType == "N") {
+      _notiType = "개별";
+    }
     let noticeSQL = `INSERT INTO t_notice(noti_type, noti_title, noti_content, start_date, end_date, noti_owner, insert_date, user_id, new_flag, file_path, file_name)
-                 VALUES(?,?,?,DATE_FORMAT(?,"%y-%m-%d"),DATE_FORMAT(?,"%y-%m-%d"),?,now(),'8888','N', ?, ?)`;
+                 VALUES('${_notiType}','${notiTitle}','${notiContent}', DATE_FORMAT('${startDate}',"%y-%m-%d"),DATE_FORMAT('${endDate}',"%y-%m-%d"),'${notiOwer}',now(), "9999",'N', '${filePath}', '${await listDir()}')`;
     console.log("noticeSQL=>" + noticeSQL);
-    const data = await pool.query(noticeSQL, [
-      notiType,
-      notiTitle,
-      notiContent,
-      startDate,
-      endDate,
-      notiOwer,
-      filePath,
-      fileName,
-    ]);
+    const data = await pool.query(noticeSQL);
 
     // 제일 최근에 추가된 공지사항의 idx값을 불러온다
     let getIdxSQL = `SELECT idx as idx FROM t_notice ORDER BY idx DESC LIMIT 1`;
     const getIdx = await pool.query(getIdxSQL);
     console.log("getIdx: " + getIdx[0][0].idx);
     ////////////////////////////////////////
-    // let insertArr = [];
-    // for(i = 0; i < insertArr.length; ++i){
-    //   insertArr[i] = hoCode[i];
-    // }
-    // 전체 등록시
-    let sql = "";
 
     const arr2 = Array.from(Array(hoCode.length), () => Array(3).fill(null));
     // idx, dongCode, hoCode 순으로 배열에 입력 해야함
@@ -250,38 +240,44 @@ router.post("/postNotice", async (req, res, next) => {
 
     let values = arr2;
     /**
-     *  [1376525, "101", "101"],
+     * 입력되는 Data Format 예시
+     *[1376525, "101", "101"],
       [1376525, "101", "102"],
       [1376525, "101", "103"],
      * 
      */
     console.log(values);
-    // if (dongCode == "ALL" && hoCode == "ALL") {
-    //   sql += `LIKE '%'`;
-    // } else if (hoCode == "ALL") {
-    //   // 동 개별 등록시
-    //   sql += `= ${dongCode}`;
-    // } else if (dongCode != "ALL" && hoCode != "ALL") {
-    //   // 특정 동/호 개별 등록시
-    //   sql += `= ${dongCode} AND b.ho_code = ${hoCode}`;
-    // }
 
-    let sql2 = `INSERT INTO t_notice_send (idx, dong_code, ho_code) VALUES ?`;
-    console.log(sql2);
-    const data2 = await pool.query(sql2, [values], function (err) {
-      if (err) throw err;
-      console.log(err);
-      pool.end();
-    });
-    console.log(data2);
+    let sql = "";
+    let sqlBody = "";
+    // 공지사항 전체 등록
+    if (dongCode == "ALL" && hoCode == "ALL") {
+      sql += `LIKE '%'`;
 
-    // let noticeSendSQL = `INSERT INTO t_notice_send(idx, dong_code, ho_code)
-    // SELECT a.idx, b.dong_code, b.ho_code
-    // FROM t_notice a, t_dongho b
-    // WHERE idx = ${getIdx[0][0].idx} AND b.dong_code ${sql}`;
+      sqlBody += `INSERT INTO t_notice_send(idx, dong_code, ho_code)
+      SELECT a.idx, b.dong_code, b.ho_code
+      FROM t_notice a, t_dongho b
+      WHERE idx = ${getIdx[0][0].idx} AND b.dong_code ${sql}`;
+      const data3 = await pool.query(sqlBody);
+      console.log("sqlBody: " + sqlBody);
+    } else if (dongCode != "ALL" && hoCode == "ALL") {
+      // 동만 개별 등록시 (예: 102동 전체 세대에 공지사항 전송)
+      sql += `= ${dongCode}`;
 
-    // console.log("noticeSendSQL: " + noticeSendSQL);
-    // const data2 = await pool.query(noticeSendSQL, [hoCode]);
+      sqlBody += `INSERT INTO t_notice_send(idx, dong_code, ho_code)
+      SELECT a.idx, b.dong_code, b.ho_code
+      FROM t_notice a, t_dongho b
+      WHERE idx = ${getIdx[0][0].idx} AND b.dong_code ${sql}`;
+      console.log("sqlBody: " + sqlBody);
+    } else if (dongCode != "ALL" && hoCode != "ALL") {
+      // 특정 동/호 개별 등록시
+      sqlBody += `INSERT INTO t_notice_send (idx, dong_code, ho_code) VALUES ?`;
+      const data2 = await pool.query(sqlBody, [values], function (err) {
+        if (err) throw err;
+        console.log(err);
+        pool.end();
+      });
+    }
 
     let jsonResult = {
       resultCode: "00",
@@ -295,59 +291,45 @@ router.post("/postNotice", async (req, res, next) => {
   }
 });
 
-// // 공지사항 수정
-// router.put("/updateNotice", upload.single("file"), async (req, res, next) => {
-//   let { serviceKey = "", idx = 0, notiTitle = "", notiContent = "" } = req.body;
-//   console.log(serviceKey, idx, notiTitle, notiContent);
+// 공지사항 수정
+router.put("/updateNotice", async (req, res, next) => {
+  let {
+    serviceKey = "",
+    idx = 1376596,
+    notiTitle = "",
+    notiContent = "",
+  } = req.body;
+  console.log(serviceKey, idx, notiTitle, notiContent);
 
-//   try {
-//     // 월패드 알림이 Y 이면 수정 불가
-//     const checkNotiTypeSQL = `SELECT send_result AS sendResult FROM t_notice_send WHERE idx = ?`;
-//     console.log("checkNotiTypeSQL: " + checkNotiTypeSQL);
-//     const data = await pool.query(checkNotiTypeSQL, [idx]);
-//     console.log(data[0][0].sendResult);
-//     if (data[0][0].sendResult === "Y") {
-//       return res.json({
-//         resultCode: "08",
-//         resultMsg: "이미 등록된 공지사항 입니다.",
-//       });
-//     }
-
-//     // 파일이 없을 경우 기존과 동일하게 진행
-//     if (!req.file) {
-//       console.log("no file selected");
-//     } else if (req.file.originalname !== data[0][0].fileName) {
-//       // TODO: 파일 경로, 파일명만 해당 idx에 row에서 수정 한다
-//       let fileName = req.file.originalname;
-//       let filePath =
-//         `http://${getServerIp()}:3000/` + req.file.destination + fileName;
-//       const sql = `UPDATE t_notice SET noti_title = ?, noti_content = ?, file_path = ?, file_name = ? WHERE idx = ?`;
-//       const data = await pool.query(sql, [
-//         notiTitle,
-//         notiContent,
-//         filePath,
-//         fileName,
-//         idx,
-//       ]);
-//       let jsonResult = {
-//         resultCode: "00",
-//         resultMsg: "NORMAL_SERVICE",
-//       };
-//       return res.json(jsonResult);
-//     }
-//     const sql = `UPDATE t_notice SET noti_title = ?, noti_content = ? WHERE idx = ?`;
-//     console.log("sql: " + sql);
-//     const data2 = await pool.query(sql, [notiTitle, notiContent, idx]);
-
-//     let jsonResult = {
-//       resultCode: "00",
-//       resultMsg: "NORMAL_SERVICE",
-//     };
-//     return res.json(jsonResult);
-//   } catch (error) {
-//     return res.status(500).json(error);
-//   }
-// });
+  try {
+    // 사용자가 전에 등록한 데이터를 불러온다
+    let originalSQL = `SELECT a.noti_title AS notiTitle, a.noti_content AS notiContent,
+                              DATE_FORMAT(a.start_date, '%Y-%m-%dT%h:%m') AS startDate,
+                              DATE_FORMAT(a.end_date, '%Y-%m-%dT%h:%m ') AS endDate,
+                              b.send_result AS sendResult, a.noti_type AS notiType,
+                              a.file_name AS fileName
+                       FROM t_notice a
+                       INNER JOIN t_notice_send b
+                       WHERE a.idx = b.idx AND a.idx = ${idx}`;
+    console.log("originalSQL: " + originalSQL);
+    const originalData = await pool.query(originalSQL);
+    // 사용자가 파일을 변경 했다면, 기존에 저장된 파일은 삭제한다.
+    console.log(originalData[0][0].fileName);
+    console.log(await listDir());
+    if (originalData[0][0].fileName != (await listDir())) {
+      console.log("파일변경");
+    } else {
+      console.log("파일유지");
+    }
+    let jsonResult = {
+      resultCode: "00",
+      resultMsg: "NORMAL_SERVICE",
+    };
+    return res.json(jsonResult);
+  } catch (error) {
+    return res.status(500).json(error);
+  }
+});
 
 // // 공지사항 삭제
 router.delete("/deleteNotice/:idx", async (req, res) => {
@@ -356,16 +338,16 @@ router.delete("/deleteNotice/:idx", async (req, res) => {
 
   try {
     // 월패드 알림이 Y 이면 삭제 불가
-    const checkNotiTypeSQL = `SELECT send_result AS sendResult FROM t_notice_send WHERE idx = ?`;
-    console.log("checkNotiTypeSQL: " + checkNotiTypeSQL);
-    const data = await pool.query(checkNotiTypeSQL, [idx]);
-    console.log(data[0][0].sendResult);
-    if (data[0][0].sendResult === "Y") {
-      return res.json({
-        resultCode: "08",
-        resultMsg: "이미 등록된 공지사항 입니다.",
-      });
-    }
+    // const checkNotiTypeSQL = `SELECT send_result AS sendResult FROM t_notice_send WHERE idx = ?`;
+    // console.log("checkNotiTypeSQL: " + checkNotiTypeSQL);
+    // const data = await pool.query(checkNotiTypeSQL, [idx]);
+    // console.log(data[0][0].sendResult);
+    // if (data[0][0].sendResult === "Y") {
+    //   return res.json({
+    //     resultCode: "08",
+    //     resultMsg: "이미 등록된 공지사항 입니다.",
+    //   });
+    // }
 
     const sql = `DELETE FROM t_notice_send WHERE idx = ?`;
     console.log("sql: " + sql);

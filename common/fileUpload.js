@@ -1,8 +1,5 @@
 const multer = require("multer");
 const fs = require("fs");
-var express = require("express");
-var router = express.Router();
-var path = require("path");
 
 /**
  * 이미지, 공지사항, 계약자료, 엑셀 파일 경로 분기
@@ -11,6 +8,17 @@ var path = require("path");
  * 계약자료 : 3
  * 엑셀 : 4
  */
+
+async function listDir() {
+  try {
+    let fileName = await fs.promises.readdir(
+      "C:/dev/Cloud/complex-webapp/backend/public/notice"
+    );
+    return fileName[fileName.length - 1];
+  } catch (err) {
+    console.error("Error occurred while reading directory!", err);
+  }
+}
 
 let myFilePath = "";
 function checkUploadType(uploadType) {
@@ -24,7 +32,7 @@ function checkUploadType(uploadType) {
     myFilePath = "public/excel/";
   }
 }
-
+checkUploadType(2);
 function deleteFile(fileName) {
   console.log("파일 경로: " + myFilePath);
   fs.unlink(myFilePath + fileName, function (err) {
@@ -47,30 +55,9 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 const uploadSingleImage = upload.single("file");
 
-checkUploadType(2);
-let file = "";
-router.post("/file", (req, res, next) => {
-  uploadSingleImage(req, res, function (err) {
-    if (err) {
-      return res.status(400).send({ message: err.message });
-    }
-    // Everything went fine.
-    file = req.file;
-    console.log(file);
-    res.status(200).send({
-      filename: file.filename,
-      mimetype: file.mimetype,
-      originalname: file.originalname,
-      size: file.size,
-      fieldname: file.fieldname,
-    });
-  });
-});
-
 module.exports = {
-  upload,
-  file,
+  uploadSingleImage,
   checkUploadType,
   deleteFile,
+  listDir,
 };
-module.exports = router;

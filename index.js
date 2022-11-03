@@ -19,7 +19,7 @@ const noticeRouter = require("./routes/noticeRouter");
 const voteRouter = require("./routes/voteRouter");
 const mngFeeRouter = require("./routes/mngFeeRouter");
 const donghoInfoRoute = require("./routes/donghoInfo-route");
-const fileUploadRouter = require("./common/fileUpload");
+const fileUploadRouter = require("./common/commonApi");
 /////////////////////////////////////////////////////////////
 
 const corsOptions = {
