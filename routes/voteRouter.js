@@ -100,7 +100,7 @@ router.get("/getDetailedVoteAgenda", async (req, res, next) => {
 
   try {
     const sql = `SELECT a.vote_title AS voteTitle, DATE_FORMAT(a.v_start_dtime, '%Y-%m-%d %h:%s') AS vStartDTime, DATE_FORMAT(a.v_end_dtime, '%Y-%m-%d %h:%s') AS vEndDTime,
-                        b.item_no AS itemNo, b.item_content AS itemContent
+                        b.item_no AS itemNo, b.item_content AS itemContent, a.vote_end_flag AS voteEndFlag
                  FROM t_vote_agenda a
                  INNER JOIN t_vote_items b
                  WHERE a.idx = b.idx AND a.idx = ?`;
@@ -111,6 +111,7 @@ router.get("/getDetailedVoteAgenda", async (req, res, next) => {
     let voteTitle = resultList[0].voteTitle;
     let vStartDTime = resultList[0].vStartDTime;
     let vEndDTime = resultList[0].vEndDTime;
+    let voteEndFlag = resultList[0].voteEndFlag;
 
     let voteItems = [];
     for (var i = 0; i < resultList.length; i++) {
@@ -127,6 +128,7 @@ router.get("/getDetailedVoteAgenda", async (req, res, next) => {
       vStartDTime,
       vEndDTime,
       voteItems,
+      voteEndFlag,
     };
     return res.json(jsonResult);
   } catch (error) {
@@ -140,63 +142,64 @@ router.post("/postVoteAgenda", async (req, res, next) => {
     serviceKey = "",
     voteTitle = "",
     voteContent = "",
-    vStartDTime = "",
-    vEndDTime = "",
+    startDate = "",
+    endDate = "",
     itemContents = [],
-    dongCode = "",
   } = req.body;
   console.log(
     serviceKey,
     voteTitle,
     voteContent,
-    vStartDTime,
-    vEndDTime,
+    startDate,
+    endDate,
     itemContents
   );
-  if ((await checkServiceKeyResult(serviceKey)) == false) {
-    return res.json({
-      resultCode: "30",
-      resultMsg: "등록되지 않은 서비스키 입니다.",
-    });
-  }
   try {
-    let insertStartTime = vStartDTime + ":00:00";
-    let insertEndTime = vEndDTime + ":00:00";
-
     // 투표대상세대수 찾는 구문
-    let countSQL = `SELECT ho_code AS hoCode, (SELECT COUNT(ho_code) AS hCount FROM t_dongho WHERE dong_code = ?) AS hCount 
-                      FROM t_dongho WHERE dong_code = ?`;
-    console.log("countSQL: " + countSQL);
-    const countData = await pool.query(countSQL, [dongCode, dongCode]);
-    console.log(countData[0]);
+    // let countSQL = `SELECT ho_code AS hoCode, (SELECT COUNT(ho_code) AS hCount FROM t_dongho WHERE dong_code = ?) AS hCount
+    //                   FROM t_dongho WHERE dong_code = ?`;
+    // console.log("countSQL: " + countSQL);
+    // const countData = await pool.query(countSQL, [dongCode, dongCode]);
+    // console.log(countData[0]);
 
     const sql = `INSERT INTO t_vote_agenda(vote_title, vote_desc, v_start_dtime, v_end_dtime, insert_date,
                                              user_code, vote_end_flag, subjects_num, participation_num,
                                              vote_rate)
-                   VALUES(?,?,?,?,now(),'tester', 'N', ?, 0, 0)`;
+                   VALUES('${voteTitle}', '${voteContent}', '${startDate}', '${endDate}', now(), '관리사무실',
+                          'N', 0, 0, 0)`;
     console.log("sql: " + sql);
-    const data = await pool.query(sql, [
-      voteTitle,
-      voteContent,
-      insertStartTime,
-      insertEndTime,
-      countData[0][0].hCount,
-    ]);
+    const data = await pool.query(sql);
 
+    // 제일 최근에 추가된 공지사항의 idx값을 불러온다
     let getIdxSQL = `SELECT idx as idx FROM t_vote_agenda ORDER BY idx DESC LIMIT 1`;
     const getIdx = await pool.query(getIdxSQL);
     console.log("getIdx: " + getIdx[0][0].idx);
+    ////////////////////////////////////////
 
-    const itemsSQL = `INSERT INTO t_vote_items(item_no, idx, item_content, insert_date)
-                        VALUES(?,?,?,now())`;
-    console.log("itemsSQL: " + itemsSQL);
-    for (i = 0; i < itemContents.length; ++i) {
-      const data2 = await pool.query(itemsSQL, [
-        i + 1,
-        getIdx[0][0].idx,
-        itemContents[i],
-      ]);
+    const arr2 = Array.from(Array(itemContents.length), () =>
+      Array(3).fill(null)
+    );
+    // item_no, idx, item_content, insert_date(now()) 순으로 입력
+    for (i = 0; i < arr2.length; ++i) {
+      for (j = 0; j < 3; ++j) {
+        arr2[i][0] = i + 1;
+        arr2[i][1] = getIdx[0][0].idx;
+        arr2[i][2] = itemContents[i].text;
+      }
     }
+
+    let values = arr2;
+    console.log(values);
+    const itemsSQL = `INSERT INTO t_vote_items(item_no, idx, item_content)
+                      VALUES ?`;
+    console.log("itemsSQL: " + itemsSQL);
+    const itemData = await pool.query(itemsSQL, [values], function (err) {
+      if (err) throw err;
+      console.log(err);
+      pool.end();
+    });
+
+    console.log("itemData[0]: " + itemData[0]);
 
     let jsonResult = {
       resultCode: "00",
@@ -230,25 +233,19 @@ router.put("/updateVoteAgenda", async (req, res, next) => {
     itemContents,
     itemNo
   );
-  if ((await checkServiceKeyResult(serviceKey)) == false) {
-    return res.json({
-      resultCode: "30",
-      resultMsg: "등록되지 않은 서비스키 입니다.",
-    });
-  }
   try {
-    const sql = `SELECT DATE_FORMAT(v_start_dtime, '%Y-%m-%d %h') AS vsDtime FROM t_vote_agenda WHERE idx = ?`;
-    console.log("sql: " + sql);
-    const data = await pool.query(sql, [idx]);
-    const timeSQL = `SELECT DATE_FORMAT(now(), '%Y-%m-%d %h:%i:%s') AS currTime`;
-    const data2 = await pool.query(timeSQL);
-    let compareTime = data[0][0].vsDtime + ":00:00";
-    if (compareTime > data2[0][0].currTime) {
-      return res.json({
-        resultCode: "15",
-        resultMSG: "진행중인 투표입니다.",
-      });
-    }
+    // const sql = `SELECT DATE_FORMAT(v_start_dtime, '%Y-%m-%d %h') AS vsDtime FROM t_vote_agenda WHERE idx = ?`;
+    // console.log("sql: " + sql);
+    // const data = await pool.query(sql, [idx]);
+    // const timeSQL = `SELECT DATE_FORMAT(now(), '%Y-%m-%d %h:%i:%s') AS currTime`;
+    // const data2 = await pool.query(timeSQL);
+    // let compareTime = data[0][0].vsDtime + ":00:00";
+    // if (compareTime > data2[0][0].currTime) {
+    //   return res.json({
+    //     resultCode: "15",
+    //     resultMSG: "진행중인 투표입니다.",
+    //   });
+    // }
 
     const originSQL = `SELECT vote_title AS voteTitle, vote_desc AS voteDesc, DATE_FORMAT(v_start_dtime, '%Y-%m-%d %h') AS vsDtime, 
                                 DATE_FORMAT(v_end_dtime, '%Y-%m-%d %h') AS veDtime, b.item_content AS itemContents,
@@ -311,18 +308,18 @@ router.delete("/deleteVoteAgenda/:idx", async (req, res, next) => {
   console.log(serviceKey, idx);
 
   try {
-    const sql = `SELECT DATE_FORMAT(v_start_dtime, '%Y-%m-%d %h') AS vsDtime FROM t_vote_agenda WHERE idx = ?`;
-    console.log("sql: " + sql);
-    const data = await pool.query(sql, [idx]);
-    const timeSQL = `SELECT DATE_FORMAT(now(), '%Y-%m-%d %h:%i:%s') AS currTime`;
-    const data2 = await pool.query(timeSQL);
-    let compareTime = data[0][0].vsDtime + ":00:00";
-    if (compareTime > data2[0][0].currTime) {
-      return res.json({
-        resultCode: "15",
-        resultMSG: "진행중인 투표입니다.",
-      });
-    }
+    // const sql = `SELECT DATE_FORMAT(v_start_dtime, '%Y-%m-%d %h') AS vsDtime FROM t_vote_agenda WHERE idx = ?`;
+    // console.log("sql: " + sql);
+    // const data = await pool.query(sql, [idx]);
+    // const timeSQL = `SELECT DATE_FORMAT(now(), '%Y-%m-%d %h:%i:%s') AS currTime`;
+    // const data2 = await pool.query(timeSQL);
+    // let compareTime = data[0][0].vsDtime + ":00:00";
+    // if (compareTime > data2[0][0].currTime) {
+    //   return res.json({
+    //     resultCode: "15",
+    //     resultMSG: "진행중인 투표입니다.",
+    //   });
+    // }
 
     const deleteItemSQL = `DELETE FROM t_vote_items WHERE idx = ?`;
     console.log("deleteItemSQL: " + deleteItemSQL);
@@ -348,20 +345,42 @@ router.delete("/deleteVoteAgenda/:idx", async (req, res, next) => {
 
 // 오프라인 득표수 추가(투표 마감하기)
 router.post("/postOffVote", async (req, res, next) => {
-  let { serviceKey = "", idx = 0, itemNo = [], voteNumberOff = [] } = req.body;
-  console.log(serviceKey, idx, itemNo, voteNumberOff);
-  if ((await checkServiceKeyResult(serviceKey)) == false) {
-    return res.json({
-      resultCode: "30",
-      resultMsg: "등록되지 않은 서비스키 입니다.",
-    });
-  }
+  let {
+    serviceKey = "",
+    idx = 0,
+    voteNumberOff = [],
+    voteItems = [],
+  } = req.body;
+  console.log(serviceKey, idx, voteNumberOff, voteItems);
+
   try {
-    const sql = `UPDATE t_vote_items SET votes_number_off = ? WHERE idx = ? AND item_no = ?`;
-    console.log("sql: " + sql);
-    for (i = 0; i < itemNo.length; ++i) {
-      const data = await pool.query(sql, [voteNumberOff[i], idx, itemNo[i]]);
+    const arr2 = Array.from(Array(voteNumberOff.length), () =>
+      Array(3).fill(null)
+    );
+    // votes_number_off, idx, item_no 순으로 배열에 입력 해야함
+    for (i = 0; i < arr2.length; ++i) {
+      for (j = 0; j < 3; ++j) {
+        arr2[i][0] = voteNumberOff[i];
+        arr2[i][1] = idx;
+        arr2[i][2] = voteItems[i].itemNo;
+      }
     }
+    let values = arr2;
+    console.log(values);
+
+    const sql =
+      "UPDATE t_vote_items SET votes_number_off = ? WHERE idx = ? AND item_no = ?;";
+
+    console.log("sql: " + sql);
+    var data = "";
+    for (i = 0; i < arr2.length; ++i) {
+      data = await pool.query(sql, [
+        voteNumberOff[i],
+        idx,
+        voteItems[i].itemNo,
+      ]);
+    }
+    console.log(data[0]);
     let jsonResult = {
       resultCode: "00",
       resultMsg: "NORMAL_SERVICE",
@@ -397,15 +416,9 @@ router.post("/postCancelOffVote", async (req, res, next) => {
 });
 
 // 투표 종료 처리
-router.post("/postEndVote", async (req, res, next) => {
-  let { serviceKey = "", idx = 0 } = req.body;
+router.post("/postEndVote/:idx", async (req, res, next) => {
+  let { serviceKey = "", idx = 0 } = req.params;
   console.log(serviceKey, idx);
-  if ((await checkServiceKeyResult(serviceKey)) == false) {
-    return res.json({
-      resultCode: "30",
-      resultMsg: "등록되지 않은 서비스키 입니다.",
-    });
-  }
   try {
     const sql = `UPDATE t_vote_agenda SET vote_end_flag = 'Y', fin_end_dtime = now() WHERE idx = ?`;
     console.log("sql: " + sql);
@@ -426,16 +439,27 @@ router.get("/getVoteResult", async (req, res, next) => {
   console.log(serviceKey, idx);
 
   try {
-    const voterSQL = `SELECT CONCAT(b.dong_code, ' - ', b.ho_code, ': ' , b.vote_method) AS voters
+    const voterSQL = `SELECT CONCAT(b.dong_code, ' - ', b.ho_code) AS voters, b.vote_method AS voteMethod 
                         FROM t_vote_agenda a 
                         INNER JOIN t_voters b
                         WHERE a.idx = b.idx AND a.idx = ?;`;
     console.log("voterSQL: " + voterSQL);
     const vData = await pool.query(voterSQL, [idx]);
-    let voters = [];
+    let wpVoters = [];
+    let mbVoters = [];
     for (i = 0; i < vData[0].length; ++i) {
-      voters[i] = vData[0][i].voters;
+      if (vData[0][i].voteMethod == "W") {
+        wpVoters[i] = vData[0][i].voters;
+      } else if (vData[0][i].voteMethod == "S") {
+        mbVoters[i] = vData[0][i].voters;
+      }
     }
+    const results1 = wpVoters.filter((element) => {
+      return element !== null;
+    });
+    const results2 = mbVoters.filter((element) => {
+      return element !== null;
+    });
     const sql = `SELECT a.vote_title AS voteTitle, vote_desc AS voteDesc,
                           DATE_FORMAT(a.v_start_dtime, '%Y%m%d%h%i%s') AS vStartDate, 
                           DATE_FORMAT(a.v_end_dtime, '%Y%m%d%h%i%s') AS vEndDate, 
@@ -473,7 +497,8 @@ router.get("/getVoteResult", async (req, res, next) => {
     let jsonResult = {
       resultCode: "00",
       resultMsg: "NORMAL_SERVICE",
-      voters,
+      results1,
+      results2,
       voteTitle,
       voteDesc,
       vStartDate,
