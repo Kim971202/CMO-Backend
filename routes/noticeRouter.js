@@ -208,7 +208,6 @@ router.post("/postNotice", async (req, res, next) => {
     endDate,
     notiOwer
   );
-  console.log(await listDir());
   let filePath = "public/notice/" + (await listDir());
   try {
     let _notiType = "";
@@ -293,34 +292,16 @@ router.post("/postNotice", async (req, res, next) => {
 
 // 공지사항 수정
 router.put("/updateNotice", async (req, res, next) => {
-  let {
-    serviceKey = "",
-    idx = 1376596,
-    notiTitle = "",
-    notiContent = "",
-  } = req.body;
+  let { serviceKey = "", idx = 0, notiTitle = "", notiContent = "" } = req.body;
   console.log(serviceKey, idx, notiTitle, notiContent);
 
   try {
-    // 사용자가 전에 등록한 데이터를 불러온다
-    let originalSQL = `SELECT a.noti_title AS notiTitle, a.noti_content AS notiContent,
-                              DATE_FORMAT(a.start_date, '%Y-%m-%dT%h:%m') AS startDate,
-                              DATE_FORMAT(a.end_date, '%Y-%m-%dT%h:%m ') AS endDate,
-                              b.send_result AS sendResult, a.noti_type AS notiType,
-                              a.file_name AS fileName
-                       FROM t_notice a
-                       INNER JOIN t_notice_send b
-                       WHERE a.idx = b.idx AND a.idx = ${idx}`;
-    console.log("originalSQL: " + originalSQL);
-    const originalData = await pool.query(originalSQL);
-    // 사용자가 파일을 변경 했다면, 기존에 저장된 파일은 삭제한다.
-    console.log(originalData[0][0].fileName);
-    console.log(await listDir());
-    if (originalData[0][0].fileName != (await listDir())) {
-      console.log("파일변경");
-    } else {
-      console.log("파일유지");
-    }
+    let updateSQL = `UPDATE t_notice 
+                     SET noti_title = '${notiTitle}', noti_content = '${notiContent}', file_name = '${await listDir()}', file_path = '${await listDir()}'
+                     WHERE idx = ${idx}`;
+    console.log("updateSQL: " + updateSQL);
+    const updateData = await pool.query(updateSQL);
+
     let jsonResult = {
       resultCode: "00",
       resultMsg: "NORMAL_SERVICE",

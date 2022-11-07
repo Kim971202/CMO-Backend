@@ -21,25 +21,26 @@ async function listDir() {
 }
 
 let myFilePath = "";
-function checkUploadType(uploadType) {
-  if (uploadType === 1) {
+async function checkUploadType(uploadType) {
+  if (uploadType == 1) {
     myFilePath = "public/image/";
-  } else if (uploadType === 2) {
+  } else if (uploadType == 2) {
     myFilePath = "public/notice/";
-  } else if (uploadType === 3) {
+  } else if (uploadType == 3) {
     myFilePath = "public/contract/";
-  } else if (uploadType === 4) {
+  } else if (uploadType == 4) {
     myFilePath = "public/excel/";
   }
 }
-checkUploadType(2);
-function deleteFile(fileName) {
+async function deleteFile(fileName) {
   console.log("파일 경로: " + myFilePath);
-  fs.unlink(myFilePath + fileName, function (err) {
+  await fs.promises.unlink(myFilePath + fileName, function (err) {
     if (err) {
       console.error(err);
+      console.log("Failed to delete File");
+    } else {
+      console.log("File has been Deleted");
     }
-    console.log("File has been Deleted");
   });
 }
 
