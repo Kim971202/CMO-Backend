@@ -218,22 +218,27 @@ router.put("/updateVoteAgenda", async (req, res, next) => {
     idx = 0,
     voteTitle = "",
     voteDesc = "",
-    vStartDTime = "",
-    vEndDTime = "",
+    startDate = "",
+    endDate = "",
     itemContents = [],
-    itemNo = [],
   } = req.body;
   console.log(
     serviceKey,
     idx,
     voteTitle,
     voteDesc,
-    vStartDTime,
-    vEndDTime,
-    itemContents,
-    itemNo
+    startDate,
+    endDate,
+    itemContents
   );
   try {
+    voteNo = [];
+    voteContent = [];
+    for (i = 0; i < itemContents.length; ++i) {
+      voteNo[i] = itemContents[i].itemNo;
+      voteContent[i] = itemContents[i].itemContent;
+    }
+
     // const sql = `SELECT DATE_FORMAT(v_start_dtime, '%Y-%m-%d %h') AS vsDtime FROM t_vote_agenda WHERE idx = ?`;
     // console.log("sql: " + sql);
     // const data = await pool.query(sql, [idx]);
@@ -255,7 +260,7 @@ router.put("/updateVoteAgenda", async (req, res, next) => {
                          WHERE a.idx = ? AND b.idx = ? AND b.insert_date = b.insert_date`;
     console.log("originSQL: " + originSQL);
     const data3 = await pool.query(originSQL, [idx, idx]);
-    console.log(data3[0][1]);
+    console.log("data3: " + data3[0][0]);
     let defaultVoteTitle = data3[0][0].voteTitle;
     let defaultVoteDesc = data3[0][0].voteDesc;
     let defaultVSDtime = data3[0][0].vsDtime;
@@ -267,30 +272,55 @@ router.put("/updateVoteAgenda", async (req, res, next) => {
     if (!!voteDesc) {
       defaultVoteDesc = voteDesc;
     }
-    if (!!vStartDTime) {
-      defaultVSDtime = vStartDTime;
+    if (!!startDate) {
+      defaultVSDtime = startDate;
     }
-    if (!!vEndDTime) {
-      defaultVEDtime = vEndDTime;
+    if (!!endDate) {
+      defaultVEDtime = endDate;
     }
 
-    const updateSQL = `UPDATE t_vote_agenda a
-                         INNER JOIN t_vote_items b
-                         ON a.idx = b.idx
-                         SET a.vote_title = ?, a.vote_desc = ?, a.v_start_dtime = ?, a.v_end_dtime = ?, b.item_content = ?
-                         WHERE a.idx = ? AND b.item_no = ?`;
-    console.log("updateSQL: " + updateSQL);
-    for (i = 0; i < itemContents.length; ++i) {
-      const data4 = await pool.query(updateSQL, [
-        defaultVoteTitle,
-        defaultVoteDesc,
-        defaultVSDtime,
-        defaultVEDtime,
-        itemContents[i],
-        idx,
-        itemNo[i],
-      ]);
+    const arr2 = Array.from(Array(itemContents.length), () =>
+      Array(3).fill(null)
+    );
+    // item_no, idx, item_content, insert_date 순으로 배열에 입력 해야함
+    for (i = 0; i < arr2.length; ++i) {
+      for (j = 0; j < 3; ++j) {
+        arr2[i][0] = i + 1;
+        arr2[i][1] = idx;
+        arr2[i][2] = voteContent[i];
+      }
     }
+    let values = arr2;
+    console.log(values);
+
+    const delSQL = `DELETE FROM t_vote_items WHERE idx = ${idx}`;
+    console.log("delSQL: " + delSQL);
+    const data2 = await pool.query(delSQL);
+    const insertSQL = `INSERT INTO t_vote_items (item_no, idx, item_content) VALUES ?`;
+
+    const data = await pool.query(insertSQL, [values], function (err) {
+      if (err) throw err;
+      console.log(err);
+      pool.end();
+    });
+    console.log(data[0]);
+    // const updateSQL = `UPDATE t_vote_agenda a
+    //                      INNER JOIN t_vote_items b
+    //                      ON a.idx = b.idx
+    //                      SET a.vote_title = ?, a.vote_desc = ?, a.v_start_dtime = ?, a.v_end_dtime = ?, b.item_content = ?
+    //                      WHERE a.idx = ? AND b.item_no = ?`;
+    // console.log("updateSQL: " + updateSQL);
+    // for (i = 0; i < itemContents.length; ++i) {
+    //   const data4 = await pool.query(updateSQL, [
+    //     defaultVoteTitle,
+    //     defaultVoteDesc,
+    //     defaultVSDtime,
+    //     defaultVEDtime,
+    //     voteContent[i],
+    //     idx,
+    //     voteNo[i],
+    //   ]);
+    // }
 
     let jsonResult = {
       resultCode: "00",

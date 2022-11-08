@@ -100,9 +100,8 @@ router.get("/getMngFeeList", async (req, res, next) => {
 
 // 관리비 상세 조회
 router.get("/getDetailedMngFee", async (req, res, next) => {
-  let {dongCode = "", hoCode = "", mngYear = "", mngMonth = ""} = req.query;
+  let { dongCode = "", hoCode = "", mngYear = "", mngMonth = "" } = req.query;
   try {
-
     const sql2 = "SELECT * FROM t_set_management_fee ORDER BY mng_fee_order;"; //order by반드시 넣어야 함
     const data2 = await pool.query(sql2);
     const resultList2 = data2[0];
@@ -134,28 +133,27 @@ router.get("/getDetailedMngFee", async (req, res, next) => {
     let totalMngList = totalMngData[0];
     let totalMng = "";
     if (totalMngList.length > 0) {
-    totalMng = totalMngList[0].totalMng;
+      totalMng = totalMngList[0].totalMng;
     }
     console.log("totalMng: " + totalMng);
-    
+
     let jsonResult = {
       resultCode: "00",
       resultMsg: "NORMAL_SERVICE",
-        mngYear,
-        mngMonth,
-        dongCode,
-        hoCode,
-        mngFeeItem: mngFeeAlias,
-        mngFee,
-        totalMng,
-    
+      mngYear,
+      mngMonth,
+      dongCode,
+      hoCode,
+      mngFeeItem: mngFeeAlias,
+      mngFee,
+      totalMng,
     };
-    console.log(jsonResult)
+    console.log(jsonResult);
     return res.json(jsonResult);
   } catch (error) {
     return res.status(500).json(error);
   }
-})
+});
 
 // 관리비 삭제
 router.delete("/deleteMngFeeList", async (req, res, next) => {
