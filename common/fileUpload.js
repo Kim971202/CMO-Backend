@@ -1,5 +1,6 @@
 const multer = require("multer");
 const fs = require("fs");
+const path = require("path");
 
 /**
  * 이미지, 공지사항, 계약자료, 엑셀 파일 경로 분기
@@ -29,7 +30,7 @@ async function checkUploadType(uploadType) {
   } else if (uploadType == 3) {
     myFilePath = "public/contract/";
   } else if (uploadType == 4) {
-    myFilePath = "public/excel/";
+    myFilePath = "public/xlsx/";
   }
 }
 async function deleteFile(fileName) {
@@ -46,10 +47,11 @@ async function deleteFile(fileName) {
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, myFilePath);
+    cb(null, "public/xlsx/");
   },
+  // Date.now() + "-" +
   filename: function (req, file, cb) {
-    cb(null, Date.now() + "-" + file.originalname);
+    cb(null, file.originalname);
   },
 });
 
@@ -57,6 +59,7 @@ const upload = multer({ storage: storage });
 const uploadSingleImage = upload.single("file");
 
 module.exports = {
+  upload,
   uploadSingleImage,
   checkUploadType,
   deleteFile,

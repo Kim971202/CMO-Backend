@@ -245,8 +245,9 @@ router.post("/postNotice", async (req, res, next) => {
       [1376525, "101", "103"],
      * 
      */
-    console.log(values);
 
+    out = JSON.parse(arr2);
+    console.log(out);
     let sql = "";
     let sqlBody = "";
     // 공지사항 전체 등록

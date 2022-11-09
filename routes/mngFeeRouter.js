@@ -1,6 +1,9 @@
 var express = require("express");
 var router = express.Router();
 const pool = require("../database/pool");
+const xlsx = require("xlsx");
+const fs = require("fs");
+let { upload } = require("../common/fileUpload");
 
 // 관리비 조회
 router.get("/getMngFeeList", async (req, res, next) => {
@@ -105,7 +108,7 @@ router.get("/getDetailedMngFee", async (req, res, next) => {
     const sql2 = "SELECT * FROM t_set_management_fee ORDER BY mng_fee_order;"; //order by반드시 넣어야 함
     const data2 = await pool.query(sql2);
     const resultList2 = data2[0];
-
+    console.log(resultList2);
     let mngFeeItem = [];
     let mngFeeAlias = [];
     let mngFee = [];
@@ -127,15 +130,15 @@ router.get("/getDetailedMngFee", async (req, res, next) => {
     console.log("mngFee=>" + mngFee.length);
     console.log("mngFeeItem=>" + mngFeeItem.length);
 
-    const totoalMngSql = `select total_mng as totalMng from t_management_fee
-    where mng_year = ${mngYear} and mng_month = ${mngMonth}`;
-    const totalMngData = await pool.query(totoalMngSql);
-    let totalMngList = totalMngData[0];
-    let totalMng = "";
-    if (totalMngList.length > 0) {
-      totalMng = totalMngList[0].totalMng;
-    }
-    console.log("totalMng: " + totalMng);
+    // const totoalMngSql = `select total_mng as totalMng from t_management_fee
+    // where mng_year = ${mngYear} and mng_month = ${mngMonth}`;
+    // const totalMngData = await pool.query(totoalMngSql);
+    // let totalMngList = totalMngData[0];
+    // let totalMng = "";
+    // if (totalMngList.length > 0) {
+    //   totalMng = totalMngList[0].totalMng;
+    // }
+    // console.log("totalMng: " + totalMng);
 
     let jsonResult = {
       resultCode: "00",
@@ -146,7 +149,6 @@ router.get("/getDetailedMngFee", async (req, res, next) => {
       hoCode,
       mngFeeItem: mngFeeAlias,
       mngFee,
-      totalMng,
     };
     console.log(jsonResult);
     return res.json(jsonResult);
@@ -180,5 +182,77 @@ router.delete("/deleteMngFeeList", async (req, res, next) => {
 });
 
 // 관리비 등록
+router.post("/postMngFee", upload.single("xlsx"), async (req, res, next) => {
+  let { mngYear = "", mngMonth = "", dongCode = "", hoCode = "" } = req.body;
+  console.log(mngYear, mngMonth, dongCode, hoCode);
+  const workbook = xlsx.readFile(`./public/xlsx/${req.file.filename}`); // 엑셀 파일 읽어오기
+  const firstSheetName = workbook.SheetNames[0]; // 엑셀 파일의 첫번째 시트 이름 가져오기
+  const firstSheet = workbook.Sheets[firstSheetName]; // 시트 이름을 사용해서 엑셀 파일의 첫번째 시트 가져오기
+  const firstSheetJson = xlsx.utils.sheet_to_json(firstSheet); // utils.sheet_to_json 함수를 사용해서 첫번째 시트 내용을 json 데이터로 변환
+  // console.log(Object.keys(firstSheetJson[0])[1]);
+  let test = firstSheetJson[0];
+  // 관리비 항목 설정 배열
+  const arr2 = Array.from(Array(workbook.Strings.length - 1), () =>
+    Array(3).fill(null)
+  );
+
+  for (i = 2; i < arr2.length; ++i) {
+    for (j = 0; j < 3; ++j) {
+      arr2[i][0] = "mng_fee_" + (i - 1);
+      arr2[i][1] = workbook.Strings[i].t;
+      arr2[i][2] = i - 1;
+    }
+  }
+  let values = arrToObject(arr2);
+  let excelArray = deleteRow(values, 1);
+  excelArray = deleteRow(excelArray, 27);
+  function deleteRow(arr, row) {
+    arr = arr.slice(0); // make copy
+    arr.splice(row - 1, 1);
+    return arr;
+  }
+  //create JSON object from 2 dimensional Array
+  function arrToObject(arr2) {
+    //assuming header
+    var keys = ["mng_fee_item", "mng_fee_alias", "mng_fee_order"];
+    //vacate keys from main array
+    var newArr = arr2.slice(1, arr2.length);
+    var formatted = [],
+      data = newArr,
+      cols = keys,
+      l = cols.length;
+    for (var i = 0; i < data.length; i++) {
+      var d = data[i],
+        o = {};
+      for (var j = 0; j < l; j++) o[cols[j]] = d[j];
+      formatted.push(o);
+    }
+    return formatted;
+  }
+
+  // excelArray.forEach(async (t_management_fee) => {
+  //   await pool.query(sql, t_management_fee); // 고객 정보 데이터를 한건씩 읽으면서 MySQL 데이터베이스에 insert 처리
+  // });
+
+  ///////////////// t_management_fee /////////////////
+
+  // 항목 배열
+  let mngFeeItem = [];
+  // 관리비 요금 배열
+  let mngFeeAlias = [];
+  //  일반관리비
+  console.log(excelArray[0].mng_fee_alias);
+  for (i = 0; i < excelArray.length; ++i) {
+    mngFeeItem[i] = test[excelArray[i].mng_fee_alias];
+    mngFeeAlias[i] = excelArray[i].mng_fee_item;
+  }
+  console.log(mngFeeItem);
+  console.log(mngFeeAlias);
+  const mngFeeSQL = `INSERT INTO t_management_fee(mng_year, mng_month, ho_code, dong_code, ${mngFeeAlias}, insert_date)
+                     VALUES (${mngYear}, ${mngMonth}, ${hoCode}, ${dongCode}, ${mngFeeItem}, now()) `;
+  console.log(mngFeeSQL);
+  const data = await pool.query(mngFeeSQL);
+  res.send("ok");
+});
 
 module.exports = router;
