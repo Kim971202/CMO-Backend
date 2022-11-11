@@ -13,7 +13,7 @@ const path = require("path");
 async function listDir() {
   try {
     let fileName = await fs.promises.readdir(
-      "C:/dev/Cloud/complex-webapp/backend/public/notice"
+      "C:/dev/Cloud/complex-webapp/backend/public/xlsx"
     );
     return fileName[fileName.length - 1];
   } catch (err) {

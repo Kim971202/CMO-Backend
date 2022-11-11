@@ -99,7 +99,7 @@ router.get("/getDetailedVoteAgenda", async (req, res, next) => {
   console.log(serviceKey, idx);
 
   try {
-    const sql = `SELECT a.vote_title AS voteTitle, DATE_FORMAT(a.v_start_dtime, '%Y-%m-%d %h:%s') AS vStartDTime, DATE_FORMAT(a.v_end_dtime, '%Y-%m-%d %h:%s') AS vEndDTime,
+    const sql = `SELECT a.vote_title AS voteTitle, a.vote_desc AS voteDesc, DATE_FORMAT(a.v_start_dtime, '%Y-%m-%d %h:%s') AS vStartDTime, DATE_FORMAT(a.v_end_dtime, '%Y-%m-%d %h:%s') AS vEndDTime,
                         b.item_no AS itemNo, b.item_content AS itemContent, a.vote_end_flag AS voteEndFlag
                  FROM t_vote_agenda a
                  INNER JOIN t_vote_items b
@@ -109,6 +109,7 @@ router.get("/getDetailedVoteAgenda", async (req, res, next) => {
     let resultList = data[0];
 
     let voteTitle = resultList[0].voteTitle;
+    let voteDesc = resultList[0].voteDesc;
     let vStartDTime = resultList[0].vStartDTime;
     let vEndDTime = resultList[0].vEndDTime;
     let voteEndFlag = resultList[0].voteEndFlag;
@@ -125,6 +126,7 @@ router.get("/getDetailedVoteAgenda", async (req, res, next) => {
       resultCode: "00",
       resultMsg: "NORMAL_SERVICE",
       voteTitle,
+      voteDesc,
       vStartDTime,
       vEndDTime,
       voteItems,
@@ -238,19 +240,19 @@ router.put("/updateVoteAgenda", async (req, res, next) => {
       voteNo[i] = itemContents[i].itemNo;
       voteContent[i] = itemContents[i].itemContent;
     }
+    let resultCode = "00";
 
-    // const sql = `SELECT DATE_FORMAT(v_start_dtime, '%Y-%m-%d %h') AS vsDtime FROM t_vote_agenda WHERE idx = ?`;
-    // console.log("sql: " + sql);
-    // const data = await pool.query(sql, [idx]);
-    // const timeSQL = `SELECT DATE_FORMAT(now(), '%Y-%m-%d %h:%i:%s') AS currTime`;
-    // const data2 = await pool.query(timeSQL);
-    // let compareTime = data[0][0].vsDtime + ":00:00";
-    // if (compareTime > data2[0][0].currTime) {
-    //   return res.json({
-    //     resultCode: "15",
-    //     resultMSG: "진행중인 투표입니다.",
-    //   });
-    // }
+    const sql = `SELECT DATE_FORMAT(v_start_dtime, '%Y-%m-%d %h') AS vsDtime FROM t_vote_agenda WHERE idx = ?`;
+    console.log("sql: " + sql);
+    const data5 = await pool.query(sql, [idx]);
+    const timeSQL = `SELECT DATE_FORMAT(now(), '%Y-%m-%d %h:%i:%s') AS currTime`;
+    const data6 = await pool.query(timeSQL);
+    let compareTime = data5[0][0].vsDtime + ":00:00";
+    console.log(compareTime);
+    console.log(data6[0][0].currTime);
+    if (compareTime < data6[0][0].currTime) {
+      resultCode = "15";
+    }
 
     const originSQL = `SELECT vote_title AS voteTitle, vote_desc AS voteDesc, DATE_FORMAT(v_start_dtime, '%Y-%m-%d %h') AS vsDtime, 
                                 DATE_FORMAT(v_end_dtime, '%Y-%m-%d %h') AS veDtime, b.item_content AS itemContents,
@@ -297,33 +299,16 @@ router.put("/updateVoteAgenda", async (req, res, next) => {
     console.log("delSQL: " + delSQL);
     const data2 = await pool.query(delSQL);
     const insertSQL = `INSERT INTO t_vote_items (item_no, idx, item_content) VALUES ?`;
-
+    console.log("insertSQL: " + insertSQL);
     const data = await pool.query(insertSQL, [values], function (err) {
       if (err) throw err;
       console.log(err);
       pool.end();
     });
-    console.log(data[0]);
-    // const updateSQL = `UPDATE t_vote_agenda a
-    //                      INNER JOIN t_vote_items b
-    //                      ON a.idx = b.idx
-    //                      SET a.vote_title = ?, a.vote_desc = ?, a.v_start_dtime = ?, a.v_end_dtime = ?, b.item_content = ?
-    //                      WHERE a.idx = ? AND b.item_no = ?`;
-    // console.log("updateSQL: " + updateSQL);
-    // for (i = 0; i < itemContents.length; ++i) {
-    //   const data4 = await pool.query(updateSQL, [
-    //     defaultVoteTitle,
-    //     defaultVoteDesc,
-    //     defaultVSDtime,
-    //     defaultVEDtime,
-    //     voteContent[i],
-    //     idx,
-    //     voteNo[i],
-    //   ]);
-    // }
 
+    console.log("resultCode: " + resultCode);
     let jsonResult = {
-      resultCode: "00",
+      resultCode: resultCode,
       resultMsg: "NORMAL_SERVICE",
     };
     return res.json(jsonResult);

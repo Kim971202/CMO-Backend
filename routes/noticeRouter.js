@@ -246,8 +246,7 @@ router.post("/postNotice", async (req, res, next) => {
      * 
      */
 
-    out = JSON.parse(arr2);
-    console.log(out);
+    console.log(values);
     let sql = "";
     let sqlBody = "";
     // 공지사항 전체 등록
@@ -258,7 +257,7 @@ router.post("/postNotice", async (req, res, next) => {
       SELECT a.idx, b.dong_code, b.ho_code
       FROM t_notice a, t_dongho b
       WHERE idx = ${getIdx[0][0].idx} AND b.dong_code ${sql}`;
-      const data3 = await pool.query(sqlBody);
+      const data1 = await pool.query(sqlBody);
       console.log("sqlBody: " + sqlBody);
     } else if (dongCode != "ALL" && hoCode == "ALL") {
       // 동만 개별 등록시 (예: 102동 전체 세대에 공지사항 전송)
@@ -269,10 +268,11 @@ router.post("/postNotice", async (req, res, next) => {
       FROM t_notice a, t_dongho b
       WHERE idx = ${getIdx[0][0].idx} AND b.dong_code ${sql}`;
       console.log("sqlBody: " + sqlBody);
+      const data2 = await pool.query(sqlBody);
     } else if (dongCode != "ALL" && hoCode != "ALL") {
       // 특정 동/호 개별 등록시
       sqlBody += `INSERT INTO t_notice_send (idx, dong_code, ho_code) VALUES ?`;
-      const data2 = await pool.query(sqlBody, [values], function (err) {
+      const data3 = await pool.query(sqlBody, [values], function (err) {
         if (err) throw err;
         console.log(err);
         pool.end();

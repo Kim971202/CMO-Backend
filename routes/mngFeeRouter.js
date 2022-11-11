@@ -3,7 +3,7 @@ var router = express.Router();
 const pool = require("../database/pool");
 const xlsx = require("xlsx");
 const fs = require("fs");
-let { upload } = require("../common/fileUpload");
+let { upload, listDir } = require("../common/fileUpload");
 
 // 관리비 조회
 router.get("/getMngFeeList", async (req, res, next) => {
@@ -159,18 +159,10 @@ router.get("/getDetailedMngFee", async (req, res, next) => {
 
 // 관리비 삭제
 router.delete("/deleteMngFeeList", async (req, res, next) => {
-  let { serviceKey = "", dongCode = "", hoCode = "" } = req.body;
-  console.log(serviceKey, dongCode.hoCode);
-  if ((await checkServiceKeyResult(serviceKey)) == false) {
-    return res.json({
-      resultCode: "30",
-      resultMsg: "등록되지 않은 서비스키 입니다.",
-    });
-  }
   try {
-    const sql = `DELETE FROM t_management_fee WHERE dong_code = ? AND ho_code = ?`;
+    const sql = `DELETE FROM t_management_fee`;
     console.log("sql: " + sql);
-    const data = await pool.query(sql, [dongCode, hoCode]);
+    const data = await pool.query(sql);
     let jsonResult = {
       resultCode: "00",
       resultMsg: "NORMAL_SERVICE",
@@ -183,17 +175,15 @@ router.delete("/deleteMngFeeList", async (req, res, next) => {
 
 // 관리비 등록
 router.post("/postMngFee", upload.single("xlsx"), async (req, res, next) => {
-  let { mngYear = "", mngMonth = "", dongCode = "", hoCode = "" } = req.body;
-  console.log(mngYear, mngMonth, dongCode, hoCode);
-  const workbook = xlsx.readFile(`./public/xlsx/${req.file.filename}`); // 엑셀 파일 읽어오기
+  let { mngFeeDate = "", dongCode = "", hoCode = "" } = req.body;
+  console.log(mngFeeDate, dongCode, hoCode);
+
+  const workbook = xlsx.readFile(`./public/xlsx/${await listDir()}`); // 엑셀 파일 읽어오기
   const firstSheetName = workbook.SheetNames[0]; // 엑셀 파일의 첫번째 시트 이름 가져오기
   const firstSheet = workbook.Sheets[firstSheetName]; // 시트 이름을 사용해서 엑셀 파일의 첫번째 시트 가져오기
   const firstSheetJson = xlsx.utils.sheet_to_json(firstSheet); // utils.sheet_to_json 함수를 사용해서 첫번째 시트 내용을 json 데이터로 변환
   // console.log(Object.keys(firstSheetJson[0])[1]);
-  let sheetArray = [];
-  for (i = 0; i < firstSheetJson.length; ++i) {
-    sheetArray[i] = firstSheetJson;
-  }
+  let test = firstSheetJson[1];
   // 관리비 항목 설정 배열
   const arr2 = Array.from(Array(workbook.Strings.length - 1), () =>
     Array(3).fill(null)
@@ -233,31 +223,54 @@ router.post("/postMngFee", upload.single("xlsx"), async (req, res, next) => {
     return formatted;
   }
 
-  // excelArray.forEach(async (t_management_fee) => {
-  //   await pool.query(sql, t_management_fee); // 고객 정보 데이터를 한건씩 읽으면서 MySQL 데이터베이스에 insert 처리
-  // });
+  // DB에서 이미 관리비 설정 테이블 Data가 없을경우에만 입력
+  const sql = `INSERT INTO t_set_management_fee SET ?`;
+  const checkSQL = `SELECT mng_fee_item AS mngFeeItem FROM t_set_management_fee;`;
+  const checkData = await pool.query(checkSQL);
+  if (!checkData[0][0].mngFeeItem) {
+    console.log("Table is empty");
+    excelArray.forEach(async (mngFee) => {
+      await pool.query(sql, mngFee); // 고객 정보 데이터를 한건씩 읽으면서 MySQL 데이터베이스에 insert 처리
+    });
+  } else {
+    console.log("Table is not empty");
+  }
 
   ///////////////// t_management_fee /////////////////
 
+  const arr3 = Array.from(Array(workbook.Strings.length - 1), () =>
+    Array(3).fill(null)
+  );
+
+  for (i = 2; i < arr3.length; ++i) {
+    for (j = 0; j < 3; ++j) {
+      arr3[i][0] = "mng_fee_" + (i - 1);
+      arr3[i][1] = workbook.Strings[i].t;
+      arr3[i][2] = i - 1;
+    }
+  }
+
+  // console.log(thisArray);
   // 항목 배열
   let mngFeeItem = [];
   // 관리비 요금 배열
   let mngFeeAlias = [];
-  //  일반관리비
-  let dongArray = [];
-  let hoArray = [];
-  console.log(excelArray[0].mng_fee_alias);
+
   for (i = 0; i < excelArray.length; ++i) {
-    mngFeeItem[i] = sheetArray[excelArray[i].mng_fee_alias];
+    mngFeeItem[i] = test[excelArray[i].mng_fee_alias];
     mngFeeAlias[i] = excelArray[i].mng_fee_item;
   }
-  // console.log(mngFeeItem);
-  // console.log(mngFeeAlias);
-  console.log(mngFeeItem);
-  // const mngFeeSQL = `INSERT INTO t_management_fee(mng_year, mng_month, ho_code, dong_code, ${mngFeeAlias}, insert_date)
-  //                    VALUES (${mngYear}, ${mngMonth}, ${hoCode}, ${dongCode}, ${mngFeeItem}, now()) `;
-  // console.log(mngFeeSQL);
-  // const data = await pool.query(mngFeeSQL);
+
+  const dateInfo = mngFeeDate.split("-");
+  const mngYear = dateInfo[0];
+  const mngMonth = dateInfo[1];
+  console.log(mngYear);
+  console.log(mngMonth);
+
+  const mngFeeSQL = `INSERT INTO t_management_fee(mng_year, mng_month, ho_code, dong_code, ${mngFeeAlias}, insert_date)
+                     VALUES (${mngYear}, ${mngMonth}, ${hoCode}, ${dongCode}, ${mngFeeItem}, now()) `;
+  console.log(mngFeeSQL);
+  const data = await pool.query(mngFeeSQL);
   res.send("ok");
 });
 
