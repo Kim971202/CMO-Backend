@@ -10,6 +10,14 @@ const path = require("path");
  * 엑셀 : 4
  */
 
+function getDate() {
+  let checkDate = new Date();
+  checkDate.toISOString().split("T")[0];
+  const offset = checkDate.getTimezoneOffset();
+  checkDate = new Date(checkDate.getTime() - offset * 60 * 1000);
+  return checkDate.toISOString().split("T")[0];
+}
+
 async function listDir() {
   try {
     let fileName = await fs.promises.readdir(
@@ -47,11 +55,11 @@ async function deleteFile(fileName) {
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, myFilePath);
+    cb(null, "public/xlsx/");
   },
 
   filename: function (req, file, cb) {
-    cb(null, Date.now() + "-" + file.originalname);
+    cb(null, getDate() + "-" + file.originalname);
   },
 });
 

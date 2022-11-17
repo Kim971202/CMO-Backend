@@ -20,6 +20,7 @@ const voteRouter = require("./routes/voteRouter");
 const mngFeeRouter = require("./routes/mngFeeRouter");
 const donghoInfoRoute = require("./routes/donghoInfo-route");
 const fileUploadRouter = require("./common/commonApi");
+const dashBoardRouter = require("./routes/dashBoardRouter");
 /////////////////////////////////////////////////////////////
 
 const corsOptions = {
@@ -55,6 +56,7 @@ app.use("/vote", voteRouter);
 app.use("/mngFee", mngFeeRouter);
 app.use("/donghoInfo", donghoInfoRoute);
 app.use("/fileUpload", fileUploadRouter);
+app.use("/dashBoard", dashBoardRouter);
 /////////////////////////////////////////////////////////////
 
 app.get("/", (req, res) => {

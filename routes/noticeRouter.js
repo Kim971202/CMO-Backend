@@ -345,4 +345,28 @@ router.delete("/deleteNotice/:idx", async (req, res) => {
   }
 });
 
+// 공지사항 등록시 표시하는 테이블
+router.get("/noticeTable", async (req, res, next) => {
+  try {
+    // 공지사항을 보낼수있는 동 ///////////////////////////////////////////
+    const dongSQL = `SELECT a.dong_code AS dongCode FROM t_dong a INNER JOIN t_dongho b WHERE a.dong_code = b.dong_code GROUP BY a.dong_code;`;
+    const data1 = await pool.query(sql);
+
+    /////////////////////////////////////////////////////////////////////////
+
+    const sql = `SELECT dong_code AS dongCode, ho_code AS hoCode FROM t_dongho ORDER BY dong_code ASC`;
+    console.log("sql: " + sql);
+    const data2 = await pool.query(sql);
+    let list = data2[0];
+
+    let jsonResult = {
+      resultCode: "00",
+      list: list,
+    };
+    return res.json(jsonResult);
+  } catch (error) {
+    return res.status(500).json(error);
+  }
+});
+
 module.exports = router;

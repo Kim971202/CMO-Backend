@@ -175,41 +175,86 @@ router.delete("/deleteMngFeeList", async (req, res, next) => {
 
 // 관리비 등록
 router.post("/postMngFee", upload.single("xlsx"), async (req, res, next) => {
-  let { mngFeeDate = "", dongCode = "", hoCode = "" } = req.body;
-  console.log(mngFeeDate, dongCode, hoCode);
+  let { mngYear = "2022", mngMonth = "11" } = req.body;
+  console.log(mngYear, mngMonth);
 
   const workbook = xlsx.readFile(`./public/xlsx/${await listDir()}`); // 엑셀 파일 읽어오기
   const firstSheetName = workbook.SheetNames[0]; // 엑셀 파일의 첫번째 시트 이름 가져오기
   const firstSheet = workbook.Sheets[firstSheetName]; // 시트 이름을 사용해서 엑셀 파일의 첫번째 시트 가져오기
-  const firstSheetJson = xlsx.utils.sheet_to_json(firstSheet); // utils.sheet_to_json 함수를 사용해서 첫번째 시트 내용을 json 데이터로 변환
-  // console.log(Object.keys(firstSheetJson[0])[1]);
-  let test = firstSheetJson[1];
-  // 관리비 항목 설정 배열
-  const arr2 = Array.from(Array(workbook.Strings.length - 1), () =>
-    Array(3).fill(null)
-  );
 
-  for (i = 2; i < arr2.length; ++i) {
-    for (j = 0; j < 3; ++j) {
-      arr2[i][0] = "mng_fee_" + (i - 1);
-      arr2[i][1] = workbook.Strings[i].t;
-      arr2[i][2] = i - 1;
+  let firstSheetJson = xlsx.utils.sheet_to_json(firstSheet); // utils.sheet_to_json 함수를 사용해서 첫번째 시트 내용을 json 데이터로 변환
+  // 엑셀 배열의 길이
+  let excelArr = Object.keys(firstSheetJson);
+  console.log(excelArr.length);
+  // 각 row의 길이
+  let excelInside = Object.keys(firstSheetJson[0]);
+  // console.log(firstSheetJson[0].length);
+
+  let count = 0;
+  for (i = 0; i < excelInside.length; ++i) {
+    if (excelInside[i].includes("EMPTY")) {
+      ++count;
     }
   }
-  let values = arrToObject(arr2);
-  let excelArray = deleteRow(values, 1);
-  excelArray = deleteRow(excelArray, 27);
-  function deleteRow(arr, row) {
-    arr = arr.slice(0); // make copy
-    arr.splice(row - 1, 1);
-    return arr;
+  console.log(count);
+  const feeArray = Array.from(Array(excelArr.length), () =>
+    Array(excelInside.length - count).fill(null)
+  );
+  for (i = 0; i < excelArr.length; ++i) {
+    for (j = 0; j < excelInside.length; ++j) {
+      feeArray[i][j] = firstSheetJson[j];
+    }
   }
-  //create JSON object from 2 dimensional Array
-  function arrToObject(arr2) {
-    //assuming header
-    var keys = ["mng_fee_item", "mng_fee_alias", "mng_fee_order"];
+
+  // 관리비 항목 배열
+  const mngItems = Array.from(Array(excelArr.length), () =>
+    Array(excelInside.length - count).fill(null)
+  );
+
+  // mngItems
+  for (i = 0; i < mngItems.length; ++i) {
+    for (j = 0; j < excelInside.length - count; ++j) {
+      if (j == 0) {
+        mngItems[i][j] = "dong_code";
+      } else if (j == 1) {
+        mngItems[i][j] = "ho_code";
+      } else {
+        mngItems[i][j] = "mng_fee_" + (j - 1);
+      }
+    }
+  }
+
+  // 관리비 금액 배열
+  const mngFee = Array.from(Array(excelArr.length), () =>
+    Array(excelInside.length - count).fill(null)
+  );
+
+  // mngFee
+  for (i = 0; i < excelArr.length; ++i) {
+    for (j = 0; j < excelInside.length; ++j) {
+      mngFee[i][j] = firstSheetJson[i][excelInside[j]];
+    }
+  }
+
+  for (i = 0; i < excelArr.length; ++i) {
+    mngFee[i].splice(21, 23);
+    mngFee[i].splice(28, 1);
+  }
+
+  //console.log(mngFee);
+  // console.log(mngItems);
+
+  let jsonArray = arrayToJSONObject(mngFee);
+  console.log(jsonArray);
+  function arrayToJSONObject(arr) {
+    //header
+    for (i = 0; i < mngItems.length; ++i) {
+      var keys = mngItems[i];
+    }
+
     //vacate keys from main array
-    var newArr = arr2.slice(1, arr2.length);
+    var newArr = arr.slice(0, arr.length);
+    console.log(newArr.length);
     var formatted = [],
       data = newArr,
       cols = keys,
@@ -222,56 +267,112 @@ router.post("/postMngFee", upload.single("xlsx"), async (req, res, next) => {
     }
     return formatted;
   }
+  const sql = `INSERT INTO t_management_fee SET ?`;
 
-  // DB에서 이미 관리비 설정 테이블 Data가 없을경우에만 입력
-  const sql = `INSERT INTO t_set_management_fee SET ?`;
-  const checkSQL = `SELECT mng_fee_item AS mngFeeItem FROM t_set_management_fee;`;
-  const checkData = await pool.query(checkSQL);
-  if (!checkData[0][0].mngFeeItem) {
-    console.log("Table is empty");
-    excelArray.forEach(async (mngFee) => {
-      await pool.query(sql, mngFee); // 고객 정보 데이터를 한건씩 읽으면서 MySQL 데이터베이스에 insert 처리
-    });
-  } else {
-    console.log("Table is not empty");
-  }
+  jsonArray.forEach(async (t_management_fee) => {
+    await pool.query(sql, t_management_fee);
+  });
 
-  ///////////////// t_management_fee /////////////////
-
-  const arr3 = Array.from(Array(workbook.Strings.length - 1), () =>
-    Array(3).fill(null)
-  );
-
-  for (i = 2; i < arr3.length; ++i) {
-    for (j = 0; j < 3; ++j) {
-      arr3[i][0] = "mng_fee_" + (i - 1);
-      arr3[i][1] = workbook.Strings[i].t;
-      arr3[i][2] = i - 1;
-    }
-  }
-
-  // console.log(thisArray);
-  // 항목 배열
-  let mngFeeItem = [];
-  // 관리비 요금 배열
-  let mngFeeAlias = [];
-
-  for (i = 0; i < excelArray.length; ++i) {
-    mngFeeItem[i] = test[excelArray[i].mng_fee_alias];
-    mngFeeAlias[i] = excelArray[i].mng_fee_item;
-  }
-
-  const dateInfo = mngFeeDate.split("-");
-  const mngYear = dateInfo[0];
-  const mngMonth = dateInfo[1];
-  console.log(mngYear);
-  console.log(mngMonth);
-
-  const mngFeeSQL = `INSERT INTO t_management_fee(mng_year, mng_month, ho_code, dong_code, ${mngFeeAlias}, insert_date)
-                     VALUES (${mngYear}, ${mngMonth}, ${hoCode}, ${dongCode}, ${mngFeeItem}, now()) `;
-  console.log(mngFeeSQL);
-  const data = await pool.query(mngFeeSQL);
+  const updateSQL = `UPDATE t_management_fee SET mng_year = ${mngYear}, mng_month = ${mngMonth} WHERE DATE_FORMAT(insert_date, '%Y') = ${mngYear} 
+                                             AND DATE_FORMAT(insert_date, '%m') = ${mngMonth}`;
+  console.log("updateSQL: " + updateSQL);
+  const data = await pool.query(updateSQL);
   res.send("ok");
 });
 
 module.exports = router;
+
+// const workbook = xlsx.readFile(`./public/xlsx/${await listDir()}`); // 엑셀 파일 읽어오기
+// const firstSheetName = workbook.SheetNames[0]; // 엑셀 파일의 첫번째 시트 이름 가져오기
+// const firstSheet = workbook.Sheets[firstSheetName]; // 시트 이름을 사용해서 엑셀 파일의 첫번째 시트 가져오기
+// const firstSheetJson = xlsx.utils.sheet_to_json(firstSheet); // utils.sheet_to_json 함수를 사용해서 첫번째 시트 내용을 json 데이터로 변환
+// // console.log(Object.keys(firstSheetJson[0])[1]);
+// let test = firstSheetJson[1];
+// // 관리비 항목 설정 배열
+// const arr2 = Array.from(Array(workbook.Strings.length - 1), () =>
+//   Array(3).fill(null)
+// );
+
+// for (i = 2; i < arr2.length; ++i) {
+//   for (j = 0; j < 3; ++j) {
+//     arr2[i][0] = "mng_fee_" + (i - 1);
+//     arr2[i][1] = workbook.Strings[i].t;
+//     arr2[i][2] = i - 1;
+//   }
+// }
+// let values = arrToObject(arr2);
+// let excelArray = deleteRow(values, 1);
+// excelArray = deleteRow(excelArray, 27);
+// function deleteRow(arr, row) {
+//   arr = arr.slice(0); // make copy
+//   arr.splice(row - 1, 1);
+//   return arr;
+// }
+// //create JSON object from 2 dimensional Array
+// function arrToObject(arr2) {
+//   //assuming header
+//   var keys = ["mng_fee_item", "mng_fee_alias", "mng_fee_order"];
+//   //vacate keys from main array
+//   var newArr = arr2.slice(1, arr2.length);
+//   var formatted = [],
+//     data = newArr,
+//     cols = keys,
+//     l = cols.length;
+//   for (var i = 0; i < data.length; i++) {
+//     var d = data[i],
+//       o = {};
+//     for (var j = 0; j < l; j++) o[cols[j]] = d[j];
+//     formatted.push(o);
+//   }
+//   return formatted;
+// }
+
+// // DB에서 이미 관리비 설정 테이블 Data가 없을경우에만 입력
+// const sql = `INSERT INTO t_set_management_fee SET ?`;
+// const checkSQL = `SELECT mng_fee_item AS mngFeeItem FROM t_set_management_fee;`;
+// const checkData = await pool.query(checkSQL);
+// if (!checkData[0][0].mngFeeItem) {
+//   console.log("Table is empty");
+//   excelArray.forEach(async (mngFee) => {
+//     await pool.query(sql, mngFee); // 고객 정보 데이터를 한건씩 읽으면서 MySQL 데이터베이스에 insert 처리
+//   });
+// } else {
+//   console.log("Table is not empty");
+// }
+
+// ///////////////// t_management_fee /////////////////
+
+// const arr3 = Array.from(Array(workbook.Strings.length - 1), () =>
+//   Array(3).fill(null)
+// );
+
+// for (i = 2; i < arr3.length; ++i) {
+//   for (j = 0; j < 3; ++j) {
+//     arr3[i][0] = "mng_fee_" + (i - 1);
+//     arr3[i][1] = workbook.Strings[i].t;
+//     arr3[i][2] = i - 1;
+//   }
+// }
+
+// // console.log(thisArray);
+// // 항목 배열
+// let mngFeeItem = [];
+// // 관리비 요금 배열
+// let mngFeeAlias = [];
+
+// for (i = 0; i < excelArray.length; ++i) {
+//   mngFeeItem[i] = test[excelArray[i].mng_fee_alias];
+//   mngFeeAlias[i] = excelArray[i].mng_fee_item;
+// }
+
+// const dateInfo = mngFeeDate.split("-");
+// const mngYear = dateInfo[0];
+// const mngMonth = dateInfo[1];
+// console.log(mngYear);
+// console.log(mngMonth);
+
+// const mngFeeSQL = `INSERT INTO t_management_fee(mng_year, mng_month, ho_code, dong_code, ${mngFeeAlias}, insert_date)
+//                    VALUES (${mngYear}, ${mngMonth}, ${hoCode}, ${dongCode}, ${mngFeeItem}, now()) `;
+// console.log(mngFeeSQL);
+// const data = await pool.query(mngFeeSQL);
+// res.send("ok");
